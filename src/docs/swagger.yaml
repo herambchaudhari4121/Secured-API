@@ -1,0 +1,449 @@
+openapi: 3.0.3
+info:
+  title: SecureURL API
+  description: |
+    Real-time phishing detection and threat intelligence API
+    
+    ## Authentication
+    All API requests require authentication using API keys. Include your API key in the request header:
+    ```
+    Authorization: Bearer YOUR_API_KEY
+    ```
+    
+    ## Rate Limits
+    - Free: 100 requests/hour
+    - Professional: 1,000 requests/hour  
+    - Enterprise: Custom limits
+    
+  version: 1.0.0
+  contact:
+    name: SecureURL Support
+    email: heramb.chaudhri@gmail.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.secureurl.com/v1
+    description: Production server
+  - url: https://api-staging.secureurl.com/v1
+    description: Staging server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /scan:
+    post:
+      summary: Scan single URL
+      description: Analyze a single URL for phishing and security threats
+      operationId: scanUrl
+      tags:
+        - URL Scanning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: The URL to scan (must include protocol)
+                  example: "https://example.com"
+                detailed:
+                  type: boolean
+                  description: Return detailed analysis
+                  default: false
+                callback_url:
+                  type: string
+                  format: uri
+                  description: Webhook URL for async results
+      responses:
+        '200':
+          description: Scan completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bulk-scan:
+    post:
+      summary: Bulk URL scan
+      description: Scan multiple URLs simultaneously (max 100)
+      operationId: bulkScanUrls
+      tags:
+        - URL Scanning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - urls
+              properties:
+                urls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  maxItems: 100
+                  description: Array of URLs to scan
+                  example: ["https://example1.com", "https://example2.com"]
+                callback_url:
+                  type: string
+                  format: uri
+                  description: Webhook URL for results
+                priority:
+                  type: string
+                  enum: [low, normal, high]
+                  description: Scan priority
+                  default: normal
+      responses:
+        '202':
+          description: Bulk scan initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkScanResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bulk-scan/{batch_id}/results:
+    get:
+      summary: Get bulk scan results
+      description: Retrieve results from a bulk scan operation
+      operationId: getBulkScanResults
+      tags:
+        - URL Scanning
+      parameters:
+        - name: batch_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Batch ID from bulk scan request
+      responses:
+        '200':
+          description: Bulk scan results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkScanResults'
+        '404':
+          description: Batch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /threats:
+    get:
+      summary: Get threat intelligence
+      description: Retrieve current threat intelligence data
+      operationId: getThreats
+      tags:
+        - Threat Intelligence
+      parameters:
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+          description: Filter by severity level
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [phishing, malware, spam]
+          description: Filter by threat type
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of results to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: Threat intelligence data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreatResponse'
+
+  /account:
+    get:
+      summary: Get account information
+      description: Retrieve account details and usage statistics
+      operationId: getAccount
+      tags:
+        - Account
+      responses:
+        '200':
+          description: Account information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountInfo'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+
+  schemas:
+    ScanResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique scan identifier
+        url:
+          type: string
+          format: uri
+          description: The scanned URL
+        status:
+          type: string
+          enum: [safe, suspicious, dangerous]
+          description: Overall threat status
+        risk_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Risk score (0-1, higher is more dangerous)
+        scan_time:
+          type: string
+          format: date-time
+          description: When the scan was completed
+        analysis:
+          type: object
+          properties:
+            reputation:
+              type: string
+              enum: [trusted, unknown, malicious]
+            ssl_valid:
+              type: boolean
+            content_safe:
+              type: boolean
+            domain_age:
+              type: integer
+              description: Domain age in days
+            redirects:
+              type: integer
+              description: Number of redirects
+            malware_detected:
+              type: boolean
+            phishing_indicators:
+              type: array
+              items:
+                type: string
+        details:
+          type: object
+          properties:
+            ip_address:
+              type: string
+            location:
+              type: string
+            server_info:
+              type: string
+            certificates:
+              type: array
+              items:
+                type: string
+
+    BulkScanResponse:
+      type: object
+      properties:
+        batch_id:
+          type: string
+          description: Unique batch identifier
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        total_urls:
+          type: integer
+          description: Total number of URLs in batch
+        estimated_completion:
+          type: string
+          format: date-time
+          description: Estimated completion time
+        results_url:
+          type: string
+          description: URL to retrieve results
+
+    BulkScanResults:
+      type: object
+      properties:
+        batch_id:
+          type: string
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        total_urls:
+          type: integer
+        completed:
+          type: integer
+          description: Number of completed scans
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScanResult'
+
+    ThreatResponse:
+      type: object
+      properties:
+        threats:
+          type: array
+          items:
+            $ref: '#/components/schemas/Threat'
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            has_more:
+              type: boolean
+
+    Threat:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [phishing, malware, spam]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        indicators:
+          type: array
+          items:
+            type: string
+        first_seen:
+          type: string
+          format: date-time
+        last_seen:
+          type: string
+          format: date-time
+        sources:
+          type: array
+          items:
+            type: string
+        affected_regions:
+          type: array
+          items:
+            type: string
+
+    AccountInfo:
+      type: object
+      properties:
+        account:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+              format: email
+            plan:
+              type: string
+              enum: [free, professional, enterprise]
+            status:
+              type: string
+              enum: [active, suspended, cancelled]
+            created_at:
+              type: string
+              format: date-time
+        usage:
+          type: object
+          properties:
+            current_period:
+              type: object
+              properties:
+                start:
+                  type: string
+                  format: date-time
+                end:
+                  type: string
+                  format: date-time
+                requests_made:
+                  type: integer
+                requests_limit:
+                  type: integer
+            rate_limits:
+              type: object
+              properties:
+                requests_per_hour:
+                  type: integer
+                burst_limit:
+                  type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code identifier
+            message:
+              type: string
+              description: Human-readable error message
+            details:
+              type: object
+              description: Additional error details
+            request_id:
+              type: string
+              description: Unique request identifier for support
+
+tags:
+  - name: URL Scanning
+    description: URL security scanning operations
+  - name: Threat Intelligence
+    description: Threat intelligence and security data
+  - name: Account
+    description: Account management and usage statistics

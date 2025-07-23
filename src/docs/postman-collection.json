@@ -1,0 +1,151 @@
+{
+  "info": {
+    "name": "SecureURL API",
+    "description": "Real-time phishing detection and threat intelligence API",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.secureurl.com/v1",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "sk_test_4eC39HqLyjWDarjtT1zdp7dc",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "URL Scanning",
+      "item": [
+        {
+          "name": "Scan Single URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com\",\n  \"detailed\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/scan",
+              "host": ["{{base_url}}"],
+              "path": ["scan"]
+            },
+            "description": "Analyze a single URL for phishing and security threats"
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"scan_1234567890\",\n  \"url\": \"https://example.com\",\n  \"status\": \"safe\",\n  \"risk_score\": 0.12,\n  \"scan_time\": \"2024-01-15T10:30:00Z\",\n  \"analysis\": {\n    \"reputation\": \"trusted\",\n    \"ssl_valid\": true,\n    \"content_safe\": true,\n    \"domain_age\": 3650,\n    \"redirects\": 0,\n    \"malware_detected\": false,\n    \"phishing_indicators\": []\n  },\n  \"details\": {\n    \"ip_address\": \"93.184.216.34\",\n    \"location\": \"United States\",\n    \"server_info\": \"nginx/1.18.0\",\n    \"certificates\": [\"SSL Certificate Valid\"]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bulk URL Scan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"urls\": [\n    \"https://example1.com\",\n    \"https://example2.com\"\n  ],\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/bulk-scan",
+              "host": ["{{base_url}}"],
+              "path": ["bulk-scan"]
+            },
+            "description": "Scan multiple URLs simultaneously"
+          }
+        },
+        {
+          "name": "Get Bulk Scan Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/bulk-scan/{{batch_id}}/results",
+              "host": ["{{base_url}}"],
+              "path": ["bulk-scan", "{{batch_id}}", "results"]
+            },
+            "description": "Retrieve results from a bulk scan operation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Threat Intelligence",
+      "item": [
+        {
+          "name": "Get Current Threats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/threats?severity=high&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["threats"],
+              "query": [
+                {
+                  "key": "severity",
+                  "value": "high"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Retrieve current threat intelligence data"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Account Management",
+      "item": [
+        {
+          "name": "Get Account Info",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/account",
+              "host": ["{{base_url}}"],
+              "path": ["account"]
+            },
+            "description": "Retrieve account details and usage statistics"
+          }
+        }
+      ]
+    }
+  ]
+}
